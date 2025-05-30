@@ -3,7 +3,7 @@
 
 TEST(MSQueueTest, ConstructorCreatesDummyNode) {
     lockfree::msqueue::Queue<int> queue;
-    EXPECT_FALSE(queue.is_empty()); // Dummy node means not technically empty
+    EXPECT_TRUE(queue.is_empty()); // Queue with only dummy node is empty
 }
 
 TEST(MSQueueTest, EnqueueSingleItem) {

@@ -18,13 +18,13 @@ public:
         }
         
         dummy->next.store(nullptr, std::memory_order_relaxed);
-        head = {dummy, 0};
-        tail = {dummy, 0};
+        head.store(dummy, std::memory_order_relaxed);
+        tail.store(dummy, std::memory_order_relaxed);
     }
     
     ~Queue() {
         // Basic cleanup (will be enhanced with hazard pointers)
-        auto curr = head.load(std::memory_order_relaxed).ptr;
+        auto curr = head.load(std::memory_order_relaxed);
         while (curr) {
             auto next_ptr = curr->next.load(std::memory_order_relaxed);
             delete curr;
@@ -39,46 +39,39 @@ public:
             return false; // Allocation failed
         }
         node->data = data;
-        // Initialize next as null pointer_t
-        internal::pointer_t<T> null_next{nullptr, 0};
-        node->next.store(null_next, std::memory_order_relaxed);
+        // Initialize next as null
+        node->next.store(nullptr, std::memory_order_relaxed);
 
         while (true) {
-            auto last = internal::load(tail, std::memory_order_relaxed);
-            auto next = internal::load(last.ptr->next, std::memory_order_relaxed);
+            auto last = tail.load(std::memory_order_relaxed);
+            auto next = last->next.load(std::memory_order_relaxed);
             
             // Verify tail hasn't changed
-            if (internal::load(tail, std::memory_order_acquire) != last) {
+            if (tail.load(std::memory_order_acquire) != last) {
                 continue;
             }
             
-            if (next.ptr == nullptr) {
+            if (next == nullptr) {
                 // Try to link new node
-                internal::pointer_t<T> new_next{node, next.counter + 1};
-                if (internal::compare_exchange(
-                    last.ptr->next,
+                if (last->next.compare_exchange_weak(
                     next,
-                    new_next,
+                    node,
                     std::memory_order_release,
                     std::memory_order_relaxed)) {
-                    
+                
                     // Try to update tail (may fail, that's OK)
-                    internal::pointer_t<T> new_tail{node, last.counter + 1};
-                    internal::compare_exchange(
-                        tail,
+                    tail.compare_exchange_weak(
                         last,
-                        new_tail,
+                        node,
                         std::memory_order_relaxed,
                         std::memory_order_relaxed);
                     return true;
                 }
             } else {
                 // Help advance tail
-                internal::pointer_t<T> new_tail{next.ptr, last.counter + 1};
-                internal::compare_exchange(
-                    tail,
+                tail.compare_exchange_weak(
                     last,
-                    new_tail,
+                    next,
                     std::memory_order_relaxed,
                     std::memory_order_relaxed);
             }
@@ -89,63 +82,58 @@ public:
         while (true) {
             // Protect head pointer
             hp_manager.acquire(0, nullptr);
-            internal::pointer_t<T> first = internal::load(head, std::memory_order_acquire);
-            hp_manager.acquire(0, first.ptr); // Re-protect with actual pointer
+            auto first = head.load(std::memory_order_acquire);
+            hp_manager.acquire(0, first); // Re-protect with actual pointer
             
-            internal::pointer_t<T> last = internal::load(tail, std::memory_order_acquire);
-            internal::pointer_t<T> next = internal::load(first.ptr->next, std::memory_order_acquire);
+            auto last = tail.load(std::memory_order_acquire);
+            auto next = first->next.load(std::memory_order_acquire);
             
             // Re-check head hasn't changed
-            if (internal::load(head, std::memory_order_acquire) != first) {
+            if (head.load(std::memory_order_acquire) != first) {
                 continue;
             }
             
-            if (first.ptr == last.ptr) {
-                if (next.ptr == nullptr) {
+            if (first == last) {
+                if (next == nullptr) {
                     hp_manager.release(0);
                     return false; // Queue is empty
                 }
                 // Help advance tail
-                internal::pointer_t<T> new_tail{next.ptr, last.counter + 1};
-                internal::compare_exchange(
-                    tail,
+                tail.compare_exchange_weak(
                     last,
-                    new_tail,
+                    next,
                     std::memory_order_relaxed,
                     std::memory_order_relaxed);
             } else {
                 // Protect next pointer
-                hp_manager.acquire(1, next.ptr);
+                hp_manager.acquire(1, next);
                 
                 // Re-check head hasn't changed
-                if (internal::load(head, std::memory_order_acquire) != first) {
+                if (head.load(std::memory_order_acquire) != first) {
                     hp_manager.release(1);
                     continue;
                 }
                 
-                result = next.ptr->data;
-                internal::pointer_t<T> new_head{next.ptr, first.counter + 1};
-                if (internal::compare_exchange(
-                    head,
+                result = next->data;
+                if (head.compare_exchange_weak(
                     first,
-                    new_head,
+                    next,
                     std::memory_order_release,
                     std::memory_order_relaxed)) {
                 
-                    hp_manager.retire_node(first.ptr);
+                    hp_manager.retire_node<internal::Node<T>>(first);
                     hp_manager.release(0);
                     hp_manager.release(1);
                     return true;
                 }
-            }   // Added missing closing brace for else block
+            }
         }
     }
     
     bool is_empty() const {
-        auto h = internal::load(head, std::memory_order_acquire);
-        auto t = internal::load(tail, std::memory_order_acquire);
-        return (h.ptr == t.ptr) &&
-               (internal::load(h.ptr->next, std::memory_order_relaxed).ptr == nullptr);
+        auto h = head.load(std::memory_order_acquire);
+        auto t = tail.load(std::memory_order_acquire);
+        return (h == t) && (h->next.load(std::memory_order_relaxed) == nullptr);
     }
     
     // Disable copying
@@ -153,9 +141,9 @@ public:
     Queue& operator=(const Queue&) = delete;
 
 private:
-    std::atomic<internal::pointer_t<T>> head;
-    std::atomic<internal::pointer_t<T>> tail;
+    std::atomic<internal::Node<T>*> head;
+    std::atomic<internal::Node<T>*> tail;
     internal::HazardPointerManager hp_manager;
-};  // Added missing semicolon after class definition
+};
 
 } // namespace lockfree::msqueue
