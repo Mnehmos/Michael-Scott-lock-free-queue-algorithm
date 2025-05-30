@@ -1,49 +1,79 @@
 # Michael-Scott Lock-Free Queue Implementation
 
-This project provides a C++ implementation of the Michael-Scott lock-free queue algorithm, featuring:
-- Hazard pointer-based memory reclamation
-- Atomic operations with ABA prevention
+This project implements the Michael-Scott lock-free queue algorithm with hazard pointers for safe memory reclamation. The implementation is written in C++ and includes comprehensive tests and demos.
+
+## Features
+- Lock-free enqueue and dequeue operations
+- Hazard pointers for safe memory reclamation
 - Comprehensive test suite
+- Interactive queue demo
+- Minimal test for quick verification
 
-## Prerequisites
-- C++17 compiler
-- CMake (version 3.10 or higher)
-- MSYS2 (for Windows builds)
+## Requirements
+- MSYS2 (Windows)
+- g++ compiler
+- Google Test framework (included in MSYS2)
 
-## Building
+## Build and Run
 ```bash
-mkdir build
-cd build
-cmake ..
-cmake --build .
+# Install dependencies
+.\setup_msys2.ps1
+
+# Build and run all tests
+.\build_and_run.bat
 ```
 
-## Running Tests
-```bash
-# Run basic tests
-./tests/basic_tests
+## Tests
+1. **Basic Tests**: Comprehensive tests using Google Test framework
+   ```text
+   [==========] Running 5 tests from 1 test suite.
+   [----------] Global test environment set-up.
+   [ RUN      ] MSQueueTest.ConstructorCreatesDummyNode
+   [       OK ] MSQueueTest.ConstructorCreatesDummyNode (0 ms)
+   [ RUN      ] MSQueueTest.EnqueueSingleItem
+   [       OK ] MSQueueTest.EnqueueSingleItem (0 ms)
+   [ RUN      ] MSQueueTest.DequeueSingleItem
+   [       OK ] MSQueueTest.DequeueSingleItem (0 ms)
+   [ RUN      ] MSQueueTest.DequeueFromEmpty
+   [       OK ] MSQueueTest.DequeueFromEmpty (0 ms)
+   [ RUN      ] MSQueueTest.EnqueueDequeueSequence
+   [       OK ] MSQueueTest.EnqueueDequeueSequence (0 ms)
+   [----------] 5 tests from MSQueueTest (0 ms total)
+   [  PASSED  ] 5 tests.
+   ```
 
-# Run minimal test
-./minimal_test
+2. **Manual Test**: Basic queue operations
+   ```text
+   Dequeued: 1
+   Dequeued: 2
+   Dequeued: 3
+   Test complete!
+   ```
 
-# Run manual tests
-./manual_test
-```
+3. **Minimal Test**: Simple queue operations
+   ```text
+   Dequeued: 1
+   Dequeued: 2
+   Dequeued: 3
+   Minimal test completed successfully!
+   ```
 
-## Key Components
-- `implementation/include/lockfree/msqueue.hpp`: Main queue implementation
-- `implementation/src/atomic_wrappers.hpp`: Atomic operation wrappers
-- `implementation/src/hazard_pointer.hpp`: Hazard pointer manager
-- `implementation/src/node.hpp`: Queue node structure
-- `implementation/tests/`: Test suite
+4. **Interactive Demo**: Run queue_demo.exe to interact with the queue
 
-## Demo Programs
-- `minimal_test.cpp`: Basic functionality test
-- `queue_demo.cpp`: Extended functionality demo
-- `manual_test.cpp`: Interactive test program
+## Implementation Details
+- Uses hazard pointers for safe memory reclamation
+- Header-only implementation (msqueue.hpp)
+- Atomic operations for thread safety
+- Cache line padding to prevent false sharing
 
-## Documentation
-See the `design/` directory for architectural documentation and pseudocode.
+## Files
+- `implementation/include/lockfree/msqueue.hpp` - Main queue implementation
+- `implementation/src/hazard_pointer.hpp` - Hazard pointer manager
+- `implementation/tests/basic_tests.cpp` - Comprehensive tests
+- `manual_test.cpp` - Basic manual test
+- `queue_demo.cpp` - Interactive demo
+- `minimal_queue.hpp` - Minimal queue implementation for comparison
+- `minimal_test.cpp` - Minimal queue test
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
