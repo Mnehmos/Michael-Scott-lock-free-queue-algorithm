@@ -1,0 +1,27 @@
+# Compiled files
+*.exe
+*.o
+*.a
+*.out
+
+# Build directories
+build/
+bin/
+
+# Logs and outputs
+*.log
+*.txt
+*.output
+compilation_errors.txt
+verbose_errors.txt
+minimal_test_errors.txt
+minimal_test_output.txt
+queue_demo_compilation_output.txt
+
+# Editor files
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
